@@ -7,6 +7,14 @@
   pointer-events: none;
 }
 
+* {
+  color: #fff;
+}
+
+.main-button{
+  margin-top: 15px;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .App-logo {
     animation: App-logo-spin infinite 20s linear;
@@ -43,6 +51,11 @@
   background-color: #17a2b8 !important;
   border-top-left-radius: 0 !important;
   border-bottom-left-radius: 0 !important;
+}
+.title{
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-top: 10px;
 }
 
 @keyframes App-logo-spin {
