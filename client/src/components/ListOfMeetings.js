@@ -75,7 +75,7 @@ class ListOfMeetings extends Component {
                       <hr className="my-4" />
                       <CountDown date={meeting.start_time} />
                       {meeting.agenda && <p>{meeting.agenda}</p>}
-                      {new Date(meeting.start_time) > new Date() ?
+                      {new Date(meeting.start_time) < new Date() ?
                         <a className="btn btn-light main-button" target="blank" href={meeting.join_url} role="button">Join</a>
                         : null}
                     </div>

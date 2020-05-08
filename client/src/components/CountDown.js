@@ -42,7 +42,6 @@ export default function CountdownTimer(date) {
 
   return (
     <div>
-      {timerComponents.length ? timerComponents : <span>This session is finished!</span>}
     </div>
   );
 }
