@@ -66,17 +66,17 @@ class ListOfMeetings extends Component {
             data.meetings.sort((a, b) => b.start_time - a.start_time)
               .filter(meeting => meetingIds.indexOf(meeting.id) > -1)
               .map(meeting =>
-                <div key={meeting.id} className="col-4 py-2">
+                <div key={meeting.id} className="col-lg-4 col-md-6 col-sm-8 py-2" >
                   {userData.filter(d => d.meetingId === meeting.id).map(d =>
                     <div key={d.meetingId} style={{ backgroundColor: d.color }} className="py-4">
-                      <img src={d.icon} alt={d.id}/>
+                      {d.icon && <img src={d.icon} alt={d.id} />}
                       <h6 className="title">{meeting.topic}</h6>
-                      <p className="lead">Meeting duration: {meeting.duration}min</p>
+                      <p className="lead">Duration: {meeting.duration}min</p>
                       <hr className="my-4" />
                       <CountDown date={meeting.start_time} />
                       {meeting.agenda && <p>{meeting.agenda}</p>}
                       {new Date(meeting.start_time) > new Date() ?
-                        <a className="btn btn-light main-button" target="blank" href={meeting.join_url} role="button">Join meeting</a>
+                        <a className="btn btn-light main-button" target="blank" href={meeting.join_url} role="button">Join</a>
                         : null}
                     </div>
                   )}
