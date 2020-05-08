@@ -23,8 +23,7 @@ const token = jwt.sign(payload, config.APISecret);
 //get the form 
 app.get('/', (req, res) => res.send(req.body));
 
-app.get('/meetings', (req, res) => {
-  console.log("https://api.zoom.us/v2/users/" + config.userId, 'dsadadasdsa')
+app.get('/userinfo', (req, res) => {
   let options = {
     uri: "https://api.zoom.us/v2/users/" + config.userId,
     qs: {
@@ -52,11 +51,10 @@ app.get('/meetings', (req, res) => {
 })
 
 //use userinfo from the form and make a post request to /userinfo
-app.get('/userinfo', (req, res) => {
-  //Store the options for Zoom API which will be used to make an API call later.
+app.get('/meetings/:userId', (req, res) => {
+  console.log(req.params.userId, "UESR")
   var options = {
-    //You can use a different uri if you're making an API call to a different Zoom endpoint.
-    uri: "https://api.zoom.us/v2/users/daliborka.b.ciric@gmail.com",
+    uri: "https://api.zoom.us/v2/users/" + req.params.userId + "/meetings",
     qs: {
       status: 'active'
     },
@@ -70,19 +68,9 @@ app.get('/userinfo', (req, res) => {
     json: true //Parse the JSON string in the response
   };
 
-  //Use request-promise module's .then() method to make request calls.
   rp(options)
     .then((response) => {
-      //printing the response on the console
-      console.log('User has', response);
-      //console.log(typeof response);
       resp = response
-      //Adding html to the page
-      // var title1 = '<center><h3>Your token: </h3></center>'
-      // var result1 = title1 + '<code><pre style="background-color:#aef8f9;">' + token + '</pre></code>';
-      // var title = '<center><h3>User\'s information:</h3></center>'
-      //Prettify the JSON format using pre tag and JSON.stringify
-      // var result = title + '<code><pre style="background-color:#aef8f9;">' + JSON.stringify(resp, null, 2) + '</pre></code>'
       var result = JSON.stringify(resp)
       res.send(JSON.parse(JSON.stringify(result)));
 
