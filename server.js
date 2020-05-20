@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 const port = process.env.PORT || 5000;;
 const config = require('./config');
+const jwt = require('jsonwebtoken');
 const rp = require('request-promise');
 
 let http = require('http');
@@ -11,14 +12,18 @@ let io = require('socket.io').listen(server);
 
 // The server should start listening
 server.listen(80);
+const payload = {
+  iss: config.APIKey,
+  exp: ((new Date()).getTime() + 5000)
+};
+const token = jwt.sign(payload, config.APISecret);
 
 // usernames which are currently connected to the chat
 sockets = [];
 people = {};
 myRoom = null;
 let users = [];
-
-var userNames = {};
+let members = [];
 
 //generate private room name for two users
 function getARoom(user1, user2) {
@@ -40,10 +45,11 @@ io.sockets.on('connection', (socket) => {
   //join the server
   socket.on('join', (name) => {
     people[socket.id] = { name: name };
-    var userInfo = new Object();
+    let userInfo = new Object();
     userInfo.userName = name;
     userInfo.socketId = socket.id;
     users.push(userInfo);
+
     updateClients(users);
   });
 
@@ -53,18 +59,23 @@ io.sockets.on('connection', (socket) => {
     if (receiverSocketId) {
       let receiver = people[receiverSocketId];
       let room = getARoom(people[socket.id], receiver);
+      let roomMembers = new Object();
       myRoom = room
-      
+
       socket.join(room);
 
       io.sockets.connected[receiverSocketId].join(room);
+      roomMembers.room = room;
+      roomMembers.receiver = receiver;
+      roomMembers.receiverID = receiverSocketId;
+      roomMembers.sender = people[socket.id];
+      roomMembers.senderId = socket.id;
+      members.push(roomMembers);
+      updateRoomMembers(members);
+
       io.sockets.in(room).emit('private room created', room, message);
       io.sockets.emit("change_data");
     }
-  });
-
-  socket.on('send private message', (message) => {
-    io.sockets.in(myRoom).emit('private chat message', message);
   });
 
   socket.on("incoming data", (data) => {
@@ -81,6 +92,11 @@ io.sockets.on('connection', (socket) => {
     io.emit('update', usersInfo);
     io.to(socket.channel).emit('update', usersInfo);
   }
+
+  function updateRoomMembers(roomMembers) {
+    io.emit('updateRoom', roomMembers);
+    io.to(socket.channel).emit('updateRoom', roomMembers);
+  }
 });
 
 
@@ -91,47 +107,26 @@ app.listen(port, () => console.log(`Listening on port ${port}`));
 //get the form 
 app.get('/', (req, res) => res.send(req.body));
 
-app.post('/create-meeting', (req, res) => {
+app.get('/create-meeting/:userEmail', (req, res) => {
   let options = {
-    uri: `https://api.zoom.us/v2/users/${config.userId}/meetings`,
+    uri: "https://api.zoom.us/v2/users/" + req.params.userEmail + "/meetings",
     qs: {
       status: 'active'
     },
     auth: {
       'bearer': token
     },
+    method: "POST",
     headers: {
       'User-Agent': 'Zoom-api-Jwt-Request',
-      'content-type': 'application/json'
-    },
-    body: {
-
-    },
-    json: true
-  };
-});
-
-
-app.get('/userinfo', (req, res) => {
-  let options = {
-    uri: "https://api.zoom.us/v2/users/" + config.userId,
-    qs: {
-      status: 'active'
-    },
-    auth: {
-      'bearer': token
-    },
-    headers: {
-      'User-Agent': 'Zoom-api-Jwt-Request',
-      'content-type': 'application/json'
+      'Content-Type': 'application/json'
     },
     body: {
       "topic": "Bilateral meeting",
       "type": 2,
-      "start_time": "2020-05-10T19:30:00Z",
-      "duration": 3,
+      "start_time": new Date(),
       "timezone": "Europe/Belgrade",
-      "agenda": `Bilateral meeting hosted by ${config.userId}`,
+      "agenda": `Bilateral meeting hosted by ${req.params.userEmail}`,
       "settings": {
         "host_video": false,
         "participant_video": false,
@@ -160,7 +155,6 @@ app.get('/userinfo', (req, res) => {
 
 //use userinfo from the form and make a post request to /userinfo
 app.get('/meetings/:userId', (req, res) => {
-  console.log(req.params.userId, "UESR")
   let options = {
     uri: "https://api.zoom.us/v2/users/" + req.params.userId + "/meetings",
     qs: {
