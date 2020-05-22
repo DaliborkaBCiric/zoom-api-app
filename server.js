@@ -11,7 +11,7 @@ let server = http.createServer(app);
 let io = require('socket.io').listen(server);
 
 // The server should start listening
-server.listen(80);
+server.listen(8080);
 const payload = {
   iss: config.APIKey,
   exp: ((new Date()).getTime() + 5000)
@@ -43,11 +43,12 @@ function findUserByName(name) {
 io.sockets.on('connection', (socket) => {
 
   //join the server
-  socket.on('join', (name) => {
+  socket.on('join', (name, email) => {
     people[socket.id] = { name: name };
     let userInfo = new Object();
     userInfo.userName = name;
     userInfo.socketId = socket.id;
+    userInfo.email = email;
     users.push(userInfo);
 
     updateClients(users);

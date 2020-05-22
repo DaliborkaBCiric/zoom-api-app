@@ -10,7 +10,7 @@ class Chat extends Component {
 	constructor() {
 		super();
 		this.state = {
-			endpoint: 'http://localhost:80/',
+			endpoint: 'http://meetings.diplomacy.edu:8080/',
 			name: '',
 			email: '',
 			response: false,
@@ -55,7 +55,7 @@ class Chat extends Component {
 			this.setState({ emailErrorMessage: false })
 		}
 		if (name !== '' && email !== '') {
-			socket.emit("join", username);
+			socket.emit("join", username, email);
 		} else {
 			if (name === '') {
 				this.setState({ nameErrorMessage: true })
@@ -81,6 +81,8 @@ class Chat extends Component {
 			nameErrorMessage,
 			emailErrorMessage
 		} = this.state;
+		let currentUser = users && users.filter(user => user.socketId === socket.io.engine.id)[0];
+		console.log(currentUser, 'sdfjskdfhd')
 		return (
 			<div className="content">
 				{roomMembers &&
@@ -127,7 +129,7 @@ class Chat extends Component {
 											<img src={avatar} alt="Avatar" class="avatar" />
 											<span>{user.userName}</span>
 										</div>
-										<UserMeeting userEmail={email}>
+										<UserMeeting userEmail={currentUser && currentUser.email}>
 											<button className="btn btn-info" onClick={() => this.callUser(user.userName)}>Invite</button>
 										</UserMeeting>
 									</div>
