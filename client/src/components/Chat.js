@@ -2,6 +2,7 @@ import React, { Component } from 'react'
 import UserMeeting from './UserMeeting';
 import socketIOClient from "socket.io-client";
 import InviteModal from './InviteModal';
+import avatar from '../media/avatar.jpg';
 
 let socket;
 
@@ -11,10 +12,13 @@ class Chat extends Component {
 		this.state = {
 			endpoint: 'http://localhost:80/',
 			name: '',
+			email: '',
 			response: false,
 			users: [],
 			roomMembers: null,
-			modal: false
+			modal: false,
+			nameErrorMessage: false,
+			emailErrorMessage: false
 		};
 		this.toggle = this.toggle.bind(this);
 		socket = socketIOClient(this.state.endpoint);
@@ -39,8 +43,27 @@ class Chat extends Component {
 		})
 	}
 
-	addUser = (name) => {
-		socket.emit("join", name);
+	addUser = (username) => {
+		const {
+			name,
+			email
+		} = this.state
+		if (name !== "") {
+			this.setState({ nameErrorMessage: false })
+		}
+		if (email !== "") {
+			this.setState({ emailErrorMessage: false })
+		}
+		if (name !== '' && email !== '') {
+			socket.emit("join", username);
+		} else {
+			if (name === '') {
+				this.setState({ nameErrorMessage: true })
+			}
+			if (this.state.email === '') {
+				this.setState({ emailErrorMessage: true })
+			}
+		}
 	}
 
 	callUser = (name) => {
@@ -52,7 +75,11 @@ class Chat extends Component {
 		let {
 			users,
 			roomMembers,
-			name
+			name,
+			email,
+			modal,
+			nameErrorMessage,
+			emailErrorMessage
 		} = this.state;
 		return (
 			<div className="content">
@@ -63,7 +90,8 @@ class Chat extends Component {
 							receiverName={rm.receiver.name}
 							senderName={rm.sender.name}
 							toggle={this.toggle}
-							modalState={this.state.modal}
+							modalState={modal}
+							email={email}
 						/>
 					)}
 
@@ -71,11 +99,15 @@ class Chat extends Component {
 					<div key={socket.io.engine.id} >
 						<div className="form-group">
 							<label for="formGroupExampleInput">Email full name</label>
-							<input type="text" className="form-control" value={name} id="formGroupExampleInput" placeholder="John Smit" onChange={e => this.setState({ name: e.target.value })} />
+							<input type="text" className="form-control" value={name} id="formGroupExampleInput" required="required"
+								placeholder="John Smit" onChange={e => this.setState({ name: e.target.value })} />
+							<span style={{ color: 'red', display: nameErrorMessage ? 'block' : 'none' }}>This field is required</span>
 						</div>
 						<div className="form-group">
 							<label for="exampleFormControlInput2">Email your address</label>
-							<input type="email" className="form-control" id="exampleFormControlInput2" placeholder="name@example.com" />
+							<input type="email" className="form-control" id="exampleFormControlInput2" required="required"
+								placeholder="name@example.com" onChange={e => this.setState({ email: e.target.value })} />
+							<span style={{ color: 'red', display: emailErrorMessage ? 'block' : 'none' }}>This field is required</span>
 						</div>
 						<button className="btn btn-info container-fluid" onClick={() => this.addUser(name)}>Confirm</button>
 					</div>
@@ -83,18 +115,24 @@ class Chat extends Component {
 				<div>
 					{users.length > 0 && users.filter(user => user.socketId === socket.io.engine.id).map(user =>
 						<div key={user.socketId}>
-							<p>Wellcome {user.userName}</p>
+							<h3>Wellcome {user.userName}</h3>
 						</div>
 					)}
-					{users && users.filter(user => user.socketId !== socket.io.engine.id).map(user =>
-						<>
-							<label>There is a list of available users</label>
-							<p key={user.socketId}>{user.userName}
-								<UserMeeting userEmail="daliborka.b.ciric@gmail.com">
-									<button onClick={() => this.callUser(user.userName)}>Invite</button>
-								</UserMeeting>
-							</p>
-						</>)}
+					<div>
+						{name !== '' && email !== "" &&
+							users && users.filter(user => user.socketId !== socket.io.engine.id).map(user =>
+								<>
+									<div className="d-flex justify-content-between align-items-center py-2" key={user.socketId}>
+										<div>
+											<img src={avatar} alt="Avatar" class="avatar" />
+											<span>{user.userName}</span>
+										</div>
+										<UserMeeting userEmail={email}>
+											<button className="btn btn-info" onClick={() => this.callUser(user.userName)}>Invite</button>
+										</UserMeeting>
+									</div>
+								</>)}
+					</div>
 				</div>
 			</div>
 		)

@@ -3,7 +3,9 @@ import Modal, { ModalHeader, ModalBody, ModalFooter } from './Modal';
 import UserMeeting from './UserMeeting';
 
 class InviteModal extends Component {
-
+	constructor(props) {
+		super(props);
+	}
 	render() {
 		return (
 			<Modal isOpen={this.props.modalState}>
@@ -29,13 +31,12 @@ class InviteModal extends Component {
 					>
 						Close
             </button>
-					<UserMeeting userEmail="daliborka.b.ciric@gmail.com">
+					<UserMeeting userEmail={this.props.email}>
 						<button
 							type="button"
 							className="btn btn-primary"
 							onClick={this.props.toggle}
-						>Accept
-									</button>
+						>Accept</button>
 					</UserMeeting>
 				</ModalFooter>
 			</Modal>

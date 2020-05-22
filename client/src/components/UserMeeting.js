@@ -18,6 +18,7 @@ class UserMeeting extends Component {
 	}
 
 	async getData() {
+		console.log(this.props.userEmail, 'this.props.userEmail')
 		const res = await fetch(`/create-meeting/${this.props.userEmail}`);
 		return await res.json();
 	}
