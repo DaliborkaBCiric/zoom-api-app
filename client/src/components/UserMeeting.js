@@ -12,15 +12,6 @@ class UserMeeting extends Component {
 	componentDidMount() {
 		this.getMeetings().then(allMeetings => this.setState({ allMeetings }))
 			.catch(err => { console.log('There is now meetings') })
-
-		this.getData().then(userMeeting => this.setState({ userMeeting }))
-			.catch(err => { console.log('There is now meetings') })
-	}
-
-	async getData() {
-		console.log(this.props.userEmail, 'this.props.userEmail')
-		const res = await fetch(`/create-meeting/${this.props.userEmail}`);
-		return await res.json();
 	}
 
 	async getMeetings() {
@@ -28,13 +19,12 @@ class UserMeeting extends Component {
 		return await res.json();
 	}
 
-
 	render() {
 		return (
 			<a
 				rel="noopener noreferrer"
 				target="_blank"
-				href={this.state.userMeeting && this.state.userMeeting.join_url}>
+				href={this.props.userMeeting && this.props.userMeeting.join_url}>
 				{this.props.children}
 			</a>
 		)

@@ -44,7 +44,7 @@ io.sockets.on('connection', (socket) => {
 
   //join the server
   socket.on('join', (name, email) => {
-    people[socket.id] = { name: name };
+    people[socket.id] = { name: name, email: email };
     let userInfo = new Object();
     userInfo.userName = name;
     userInfo.socketId = socket.id;
@@ -55,7 +55,7 @@ io.sockets.on('connection', (socket) => {
   });
 
   //initiate private message
-  socket.on('initiate private message', (receiverName, message) => {
+  socket.on('initiate private message', (receiverName, senderEmail, message) => {
     let receiverSocketId = findUserByName(receiverName);
     if (receiverSocketId) {
       let receiver = people[receiverSocketId];
@@ -71,6 +71,7 @@ io.sockets.on('connection', (socket) => {
       roomMembers.receiverID = receiverSocketId;
       roomMembers.sender = people[socket.id];
       roomMembers.senderId = socket.id;
+      roomMembers.senderEmail = senderEmail
       members.push(roomMembers);
       updateRoomMembers(members);
 
@@ -109,6 +110,7 @@ app.listen(port, () => console.log(`Listening on port ${port}`));
 app.get('/', (req, res) => res.send(req.body));
 
 app.get('/create-meeting/:userEmail', (req, res) => {
+  console.log(req.params.userEmail, 'req.params.userEmail')
   let options = {
     uri: "https://api.zoom.us/v2/users/" + req.params.userEmail + "/meetings",
     qs: {
@@ -159,7 +161,8 @@ app.get('/meetings/:userId', (req, res) => {
   let options = {
     uri: "https://api.zoom.us/v2/users/" + req.params.userId + "/meetings",
     qs: {
-      status: 'active'
+      status: 'active',
+      page_size: '300',
     },
     auth: {
       'bearer': token
