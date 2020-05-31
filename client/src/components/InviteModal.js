@@ -3,7 +3,27 @@ import Modal, { ModalHeader, ModalBody, ModalFooter } from './Modal';
 import UserMeeting from './UserMeeting';
 
 class InviteModal extends Component {
-
+	constructor() {
+		super();
+		this.state = {
+			modal: false
+		};
+		this.toggle = this.toggle.bind(this);
+	}
+	toggle() {
+		this.setState({ modal: !this.state.modal });
+	}
+	componentDidMount() {
+		const {
+			senderName,
+			receiverName,
+			roomMembers
+		} = this.props;
+		if (roomMembers) {
+			roomMembers.find(rm => rm.room === `privateRoom${senderName}And${receiverName}`) &&
+				this.setState({ modal: true })
+		}
+	}
 	render() {
 		const {
 			senderName,
@@ -14,14 +34,14 @@ class InviteModal extends Component {
 		console.log(receiverName, 'sender profile')
 		console.log(roomName, 'roomName')
 		return (
-			<Modal isOpen={this.props.modalState}>
+			<Modal isOpen={this.state.modal}>
 				<ModalHeader>
 					<h3>Hello, {this.props.receiverName}</h3>
 					<button
 						type="button"
 						className="close"
 						aria-label="Close"
-						onClick={this.props.toggle}
+						onClick={this.toggle}
 					>
 						<span aria-hidden="true">&times;</span>
 					</button>
@@ -33,7 +53,7 @@ class InviteModal extends Component {
 					<button
 						type="button"
 						className="btn btn-secondary"
-						onClick={this.props.toggle}
+						onClick={this.toggle}
 					>
 						Close
             </button>
@@ -41,7 +61,7 @@ class InviteModal extends Component {
 						<button
 							type="button"
 							className="btn btn-primary"
-							onClick={this.props.toggle}
+							onClick={this.toggle}
 						>Accept</button>
 					</UserMeeting>
 				</ModalFooter>

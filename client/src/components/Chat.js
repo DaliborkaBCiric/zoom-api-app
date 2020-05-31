@@ -39,9 +39,6 @@ class Chat extends Component {
 		});
 		socket.on('updateRoom', roomMembers => {
 			this.setState({ roomMembers: roomMembers });
-			this.state.roomMembers &&
-				this.state.roomMembers.filter(rm => rm.receiverEmail !== sessionStorage.getItem('userEmail')).length != 1 &&
-				this.setState({ modal: true })
 		})
 	}
 
