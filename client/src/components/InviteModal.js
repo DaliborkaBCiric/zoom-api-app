@@ -3,27 +3,16 @@ import Modal, { ModalHeader, ModalBody, ModalFooter } from './Modal';
 import UserMeeting from './UserMeeting';
 
 class InviteModal extends Component {
-	constructor(props) {
-		super(props);
-		this.state = {
-			userMeeting: [],
-			allMeetings: []
-		}
-	}
-
-	componentDidMount() {
-		this.getMeetings().then(allMeetings => this.setState({ allMeetings }))
-			.catch(err => { console.log('There is now meetings') })
-	}
-
-	async getMeetings() {
-		const res = await fetch(`/meetings/${this.props.email}`);
-		return await res.json();
-	}
 
 	render() {
-		const {allMeetings} = this.state;
-		let currentMeeting = allMeetings.meetings && allMeetings.meetings[allMeetings.meetings.length - 1]
+		const {
+			senderName,
+			receiverName
+		} = this.props;
+		let roomName = this.props.roomMembers.find(room => room.room === `privateRoom${senderName}And${receiverName}`)
+		console.log(senderName, 'sender profile')
+		console.log(receiverName, 'sender profile')
+		console.log(roomName, 'roomName')
 		return (
 			<Modal isOpen={this.props.modalState}>
 				<ModalHeader>
@@ -48,7 +37,7 @@ class InviteModal extends Component {
 					>
 						Close
             </button>
-					<UserMeeting userEmail={this.props.email} userMeeting={currentMeeting}>
+					<UserMeeting userEmail={this.props.email} joinURL={roomName.inviteURL}>
 						<button
 							type="button"
 							className="btn btn-primary"

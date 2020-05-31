@@ -41,37 +41,41 @@ function findUserByName(name) {
 }
 
 io.sockets.on('connection', (socket) => {
-
+  updateClients(users);
   //join the server
-  socket.on('join', (name, email) => {
-    people[socket.id] = { name: name, email: email };
-    let userInfo = new Object();
-    userInfo.userName = name;
-    userInfo.socketId = socket.id;
-    userInfo.email = email;
-    users.push(userInfo);
-
-    updateClients(users);
+  socket.on('join', (name, email, join_url) => {
+    console.log(join_url, 'JOIN URL')
+    if (users.filter(user => user.email !== email)) {
+      people[socket.id] = { name: name, email: email };
+      let userInfo = new Object();
+      userInfo.userName = name;
+      userInfo.socketId = socket.id;
+      userInfo.email = email;
+      userInfo.join_url = join_url;
+      users.push(userInfo);
+      updateClients(users);
+    }
   });
 
   //initiate private message
-  socket.on('initiate private message', (receiverName, senderEmail, message) => {
+  socket.on('initiate private message', (receiverName, senderEmail, userMeeting, message) => {
     let receiverSocketId = findUserByName(receiverName);
     if (receiverSocketId) {
       let receiver = people[receiverSocketId];
+
       let room = getARoom(people[socket.id], receiver);
       let roomMembers = new Object();
       myRoom = room
-
       socket.join(room);
-
       io.sockets.connected[receiverSocketId].join(room);
       roomMembers.room = room;
       roomMembers.receiver = receiver;
       roomMembers.receiverID = receiverSocketId;
+      roomMembers.receiverEmail = people[socketId].email;
       roomMembers.sender = people[socket.id];
       roomMembers.senderId = socket.id;
-      roomMembers.senderEmail = senderEmail
+      roomMembers.senderEmail = people[socket.id].email;
+      roomMembers.inviteURL = userMeeting.join_url;
       members.push(roomMembers);
       updateRoomMembers(members);
 
@@ -110,9 +114,9 @@ app.listen(port, () => console.log(`Listening on port ${port}`));
 app.get('/', (req, res) => res.send(req.body));
 
 app.get('/create-meeting/:userEmail', (req, res) => {
-  console.log(req.params.userEmail, 'req.params.userEmail')
+  // console.log(req.params.userEmail, 'req.params.userEmail')
   let options = {
-    uri: "https://api.zoom.us/v2/users/" + req.params.userEmail + "/meetings",
+    uri: `https://api.zoom.us/v2/users/${config.userId}/meetings`,
     qs: {
       status: 'active'
     },
@@ -129,7 +133,7 @@ app.get('/create-meeting/:userEmail', (req, res) => {
       "type": 2,
       "start_time": new Date(),
       "timezone": "Europe/Belgrade",
-      "agenda": `Bilateral meeting hosted by ${req.params.userEmail}`,
+      "agenda": `Bilateral meeting initiated by user ${req.params.userEmail}`,
       "settings": {
         "host_video": false,
         "participant_video": false,
@@ -159,7 +163,7 @@ app.get('/create-meeting/:userEmail', (req, res) => {
 //use userinfo from the form and make a post request to /userinfo
 app.get('/meetings/:userId', (req, res) => {
   let options = {
-    uri: "https://api.zoom.us/v2/users/" + req.params.userId + "/meetings",
+    uri: `https://api.zoom.us/v2/users/${config.userId}/meetings`,
     qs: {
       status: 'active',
       page_size: '300',

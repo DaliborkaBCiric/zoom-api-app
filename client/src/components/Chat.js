@@ -6,21 +6,21 @@ import InviteModal from './InviteModal';
 import avatar from '../media/avatar.jpg';
 
 let socket;
-console.log(config.main_path, 'config.main_path')
+
 class Chat extends Component {
 	constructor() {
 		super();
 		this.state = {
-			endpoint: `${config.main_path}:8080`,
+			endpoint: `http://meetings.diplomacy.edu:8080`,
 			name: '',
 			email: '',
-			response: false,
 			users: [],
 			roomMembers: null,
 			modal: false,
 			nameErrorMessage: false,
 			emailErrorMessage: false,
-			userMeeting: []
+			userMeeting: [],
+			loading: false
 		};
 		this.toggle = this.toggle.bind(this);
 		socket = socketIOClient(this.state.endpoint);
@@ -31,47 +31,22 @@ class Chat extends Component {
 	}
 
 	componentDidMount() {
-		socket.on('connect', function () {
-			console.log("client connection done.....");
-		});
 		socket.on('update', usersInfo => {
 			this.setState({ users: usersInfo })
 		})
+		socket.on('connect', function () {
+			console.log("client connection done.....");
+		});
 		socket.on('updateRoom', roomMembers => {
 			this.setState({ roomMembers: roomMembers });
 			this.state.roomMembers &&
-				this.state.roomMembers.filter(rm => rm.receiverID != socket.io.engine.id).length != 1 &&
+				this.state.roomMembers.filter(rm => rm.receiverEmail !== sessionStorage.getItem('userEmail')).length != 1 &&
 				this.setState({ modal: true })
 		})
 	}
 
-	addUser = (username) => {
-		const {
-			name,
-			email
-		} = this.state
-		if (name !== "") {
-			this.setState({ nameErrorMessage: false })
-		}
-		if (email !== "") {
-			this.setState({ emailErrorMessage: false })
-		}
-		if (name !== '' && email !== '') {
-			socket.emit("join", username, email);
-		} else {
-			if (name === '') {
-				this.setState({ nameErrorMessage: true })
-			}
-			if (this.state.email === '') {
-				this.setState({ emailErrorMessage: true })
-			}
-		}
-
-		this.getMeeting()
-	}
-
 	async getData() {
-		const res = await fetch(`/create-meeting/${this.state.email}`);
+		const res = await fetch(`/create-meeting/${sessionStorage.getItem('userEmail')}`);
 		return await res.json();
 	}
 
@@ -80,8 +55,39 @@ class Chat extends Component {
 			.catch(err => { console.log('There is now meetings') })
 	}
 
+	addUser = (username) => {
+		const {
+			name,
+			email
+		} = this.state
+		this.getMeeting()
+		sessionStorage.setItem('userEmail', email);
+		sessionStorage.setItem('userName', name);
+		let storageEmail = sessionStorage.getItem('userEmail')
+		let storageUserName = sessionStorage.getItem('userName')
+		if (storageUserName !== "") {
+			this.setState({ nameErrorMessage: false })
+		}
+		if (storageEmail !== "") {
+			this.setState({ emailErrorMessage: false })
+		}
+		if (storageUserName !== '' && storageEmail !== '') {
+			this.setState({ loading: true })
+			setTimeout(() => {
+				socket.emit("join", storageUserName, storageEmail, this.state.userMeeting.join_url);
+			}, 2000);
+		} else {
+			if (storageUserName === '') {
+				this.setState({ nameErrorMessage: true })
+			}
+			if (storageEmail === '') {
+				this.setState({ emailErrorMessage: true })
+			}
+		}
+	}
+
 	callUser = (name, email) => {
-		socket.emit('initiate private message', name, email, 'Please Join');
+		socket.emit('initiate private message', name, email, this.state.userMeeting, 'Please Join');
 		socket.emit("send private message", "Cao")
 	}
 
@@ -90,29 +96,31 @@ class Chat extends Component {
 			users,
 			roomMembers,
 			name,
-			email,
 			modal,
 			nameErrorMessage,
 			emailErrorMessage,
-			userMeeting
+			loading
 		} = this.state;
-		let sender = roomMembers && roomMembers[0].sender.email;
+
+		let sender = roomMembers && roomMembers.find(room => room.sender.email !== sessionStorage.getItem('userEmail'))
+		let is_logged_in = users && users.find(user => user.email === sessionStorage.getItem('userEmail'))
 		return (
 			<div className="content">
 				{roomMembers &&
-					roomMembers.filter(rm => rm.receiverID == socket.io.engine.id).map((rm, index) =>
+					roomMembers.filter(rm => rm.receiverEmail === sessionStorage.getItem('userEmail')).map((rm, index) =>
 						<InviteModal
 							key={index}
+							users={users}
 							receiverName={rm.receiver.name}
 							senderName={rm.sender.name}
 							toggle={this.toggle}
 							modalState={modal}
 							email={sender}
-							userMeeting={userMeeting}
+							roomMembers={roomMembers}
 						/>
 					)}
 
-				{users && users.filter(user => user.socketId === socket.io.engine.id).length != 1 &&
+				{!is_logged_in &&
 					<div key={socket.io.engine.id} >
 						<div className="form-group">
 							<label htmlFor="formGroupExampleInput">Email full name</label>
@@ -126,29 +134,30 @@ class Chat extends Component {
 								placeholder="name@example.com" onChange={e => this.setState({ email: e.target.value })} />
 							<span style={{ color: 'red', display: emailErrorMessage ? 'block' : 'none' }}>This field is required</span>
 						</div>
-						<button className="btn btn-info container-fluid" onClick={() => this.addUser(name)}>Confirm</button>
+						<button className="btn btn-info container-fluid" onClick={() => this.addUser(name)}>
+							{loading ? 'Processing...' : 'Confirm'}
+						</button>
 					</div>
 				}
 				<div>
-					{users.length > 0 && users.filter(user => user.socketId === socket.io.engine.id).map(user =>
+					{users.length > 0 && is_logged_in && users.filter(user => user.email === sessionStorage.getItem('userEmail')).map(user =>
 						<div key={user.socketId}>
-							<h3>Wellcome {user.userName}</h3>
+							<h3>Welcome {user.userName}</h3>
 						</div>
 					)}
 					<div>
-						{name !== '' && email !== "" &&
-							users && users.filter(user => user.socketId !== socket.io.engine.id).map((user, index) =>
-								<div key={index}>
-									<div className="d-flex justify-content-between align-items-center py-2" key={user.socketId}>
-										<div>
-											<img src={avatar} alt="Avatar" className="avatar" />
-											<span>{user.userName}</span>
-										</div>
-										<UserMeeting userEmail={sender} userMeeting={userMeeting}>
-											<button className="btn btn-info" onClick={() => this.callUser(user.userName, user.email)}>Invite</button>
-										</UserMeeting>
+						{is_logged_in && users.filter(user => user.email !== sessionStorage.getItem('userEmail')).map((user, index) =>
+							<div key={index}>
+								<div className="d-flex justify-content-between align-items-center py-2" key={user.socketId}>
+									<div>
+										<img src={avatar} alt="Avatar" className="avatar" />
+										<span>{user.userName}</span>
 									</div>
-								</div>)}
+									<UserMeeting userEmail={sender} joinURL={is_logged_in.join_url}>
+										<button className="btn btn-info" onClick={() => this.callUser(user.userName, user.email)}>Invite</button>
+									</UserMeeting>
+								</div>
+							</div>)}
 					</div>
 				</div>
 			</div>
