@@ -92,6 +92,7 @@ class Chat extends Component {
 			loading,
 			roomName
 		} = this.state;
+		
 		let sender = roomMembers && roomMembers.find(room => room.sender.email !== sessionStorage.getItem('userEmail'))
 
 		let is_logged_in = users && users.find(user => user.email === sessionStorage.getItem('userEmail'))
@@ -102,8 +103,8 @@ class Chat extends Component {
 						<InviteModal
 							key={index}
 							users={users}
-							receiverName={rm.receiver.name}
-							senderName={rm.sender.name}
+							receiverName={rm.receiver.userName}
+							senderName={rm.sender.userName}
 							email={sender}
 							roomMembers={roomMembers}
 							roomName={roomName}

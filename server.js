@@ -27,13 +27,13 @@ let members = [];
 
 //generate private room name for two users
 function getARoom(user1, user2) {
-  return 'privateRoom' + user1.name + "And" + user2.name;
+  return 'privateRoom' + user1.userName + "And" + user2.userName;
 }
 
 //you could use e.g. underscore to achieve this (
 function findUserByName(name) {
   for (socketId in people) {
-    if (people[socketId].name === name) {
+    if (people[socketId].userName === name) {
       return socketId;
     }
   }
@@ -45,7 +45,7 @@ io.sockets.on('connection', (socket) => {
   updateRoomMembers(members);
   //join the server
   socket.on('join', (user) => {
-    people[socket.id] = { name: user.name, email: user.email };
+    people[socket.id] = { userName: user.name, email: user.email };
     let userInfo = new Object();
     userInfo.userName = user.name;
     userInfo.email = user.email;
@@ -78,15 +78,26 @@ io.sockets.on('connection', (socket) => {
   socket.on('remove room', (room) => {
     let m = members.find(member => member.receiverEmail === room)
     if (m) {
-      members.splice(m,1);
+      members.splice(m, 1);
     }
     updateRoomMembers(members);
   })
 
-  //disconnect from the server
-  socket.on('disconnect', () => {
+  socket.on('disconnect', function () {
     delete people[socket.id];
-  })
+    let test = []
+    Object.keys(people).forEach((key) => {
+      test.push(people[key])
+    });
+
+    let valuesA = users.reduce((users, { email }) => Object.assign(users, { [email]: email }), {});
+    let valuesB = test.reduce((users, { email }) => Object.assign(users, { [email]: email }), {});
+    let result = [...users.filter(({ email }) => !valuesB[email]), ...test.filter(({ email }) => !valuesA[email])];
+    if (result) {
+      result.map(res => users.splice(users.indexOf(res), 1))
+    }
+  });
+
 
   function updateClients(usersInfo) {
     io.emit('update', usersInfo);
