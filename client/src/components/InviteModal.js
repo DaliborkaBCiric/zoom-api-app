@@ -13,26 +13,18 @@ class InviteModal extends Component {
 	toggle() {
 		this.setState({ modal: !this.state.modal });
 	}
-	componentDidMount() {
+
+	render() {
+		setTimeout(() => {
+			this.props.roomMembers.find(room => room.receiverEmail === sessionStorage.getItem('userEmail')) &&
+				this.setState({ modal: true });
+		}, 3000);
 		const {
 			senderName,
 			receiverName,
-			roomMembers
-		} = this.props;
-		if (roomMembers) {
-			roomMembers.find(rm => rm.room === `privateRoom${senderName}And${receiverName}`) &&
-				this.setState({ modal: true })
-		}
-	}
-	render() {
-		const {
-			senderName,
-			receiverName
+			deleteRoom
 		} = this.props;
 		let roomName = this.props.roomMembers.find(room => room.room === `privateRoom${senderName}And${receiverName}`)
-		console.log(senderName, 'sender profile')
-		console.log(receiverName, 'sender profile')
-		console.log(roomName, 'roomName')
 		return (
 			<Modal isOpen={this.state.modal}>
 				<ModalHeader>
@@ -41,7 +33,7 @@ class InviteModal extends Component {
 						type="button"
 						className="close"
 						aria-label="Close"
-						onClick={this.toggle}
+						onClick={this.toggle && deleteRoom()}
 					>
 						<span aria-hidden="true">&times;</span>
 					</button>
@@ -53,15 +45,15 @@ class InviteModal extends Component {
 					<button
 						type="button"
 						className="btn btn-secondary"
-						onClick={this.toggle}
+						onClick={this.toggle && deleteRoom()}
 					>
 						Close
             </button>
-					<UserMeeting userEmail={this.props.email} joinURL={roomName.inviteURL}>
+					<UserMeeting userEmail={this.props.email} joinURL={`https://meet.jit.si/${roomName.room}#userInfo.displayName="${receiverName}"`}>
 						<button
 							type="button"
 							className="btn btn-primary"
-							onClick={this.toggle}
+							onClick={this.toggle && deleteRoom()}
 						>Accept</button>
 					</UserMeeting>
 				</ModalFooter>

@@ -41,58 +41,52 @@ function findUserByName(name) {
 }
 
 io.sockets.on('connection', (socket) => {
-  updateClients(users);
+  updateClients(users)
+  updateRoomMembers(members);
   //join the server
-  socket.on('join', (name, email, join_url) => {
-    console.log(join_url, 'JOIN URL')
-    if (users.filter(user => user.email !== email)) {
-      people[socket.id] = { name: name, email: email };
-      let userInfo = new Object();
-      userInfo.userName = name;
-      userInfo.socketId = socket.id;
-      userInfo.email = email;
-      userInfo.join_url = join_url;
+  socket.on('join', (user) => {
+    people[socket.id] = { name: user.name, email: user.email };
+    let userInfo = new Object();
+    userInfo.userName = user.name;
+    userInfo.email = user.email;
+    if (!users.find(u => u.email === user.email)) {
       users.push(userInfo);
-      updateClients(users);
     }
+    updateClients(users);
   });
 
   //initiate private message
-  socket.on('initiate private message', (receiverName, senderEmail, userMeeting, message) => {
+  socket.on('initiate private message', (receiverName, senderEmail, receiverEmail, message) => {
     let receiverSocketId = findUserByName(receiverName);
-    if (receiverSocketId) {
-      let receiver = people[receiverSocketId];
-
-      let room = getARoom(people[socket.id], receiver);
-      let roomMembers = new Object();
+    let receiver = people[receiverSocketId];
+    let room = getARoom(people[socket.id], receiver);
+    let roomMembers = new Object();
+    if (!members.find(member => member.room === room)) {
       myRoom = room
       socket.join(room);
       io.sockets.connected[receiverSocketId].join(room);
       roomMembers.room = room;
       roomMembers.receiver = receiver;
-      roomMembers.receiverID = receiverSocketId;
       roomMembers.receiverEmail = people[socketId].email;
       roomMembers.sender = people[socket.id];
-      roomMembers.senderId = socket.id;
       roomMembers.senderEmail = people[socket.id].email;
-      roomMembers.inviteURL = userMeeting.join_url;
       members.push(roomMembers);
       updateRoomMembers(members);
-
-      io.sockets.in(room).emit('private room created', room, message);
-      io.sockets.emit("change_data");
     }
   });
 
-  socket.on("incoming data", (data) => {
-    socket.broadcast.emit("outgoing data", { num: data });
-  });
+  socket.on('remove room', (room) => {
+    let m = members.find(member => member.receiverEmail === room)
+    if (m) {
+      members.splice(m,1);
+    }
+    updateRoomMembers(members);
+  })
 
   //disconnect from the server
-  io.on('disconnect', function () {
+  socket.on('disconnect', () => {
     delete people[socket.id];
-    sockets.splice(sockets.indexOf(socket), 1);
-  });
+  })
 
   function updateClients(usersInfo) {
     io.emit('update', usersInfo);
@@ -112,6 +106,44 @@ app.listen(port, () => console.log(`Listening on port ${port}`));
 
 //get the form 
 app.get('/', (req, res) => res.send(req.body));
+
+app.get('/create-user/:userName/:userEmail', (req, res) => {
+  console.log(req.params, 'req.params.userEmail')
+  let options = {
+    uri: `https://api.zoom.us/v2/users`,
+    qs: {
+      status: 'active'
+    },
+    auth: {
+      'bearer': token
+    },
+    method: "POST",
+    headers: {
+      'User-Agent': 'Zoom-api-Jwt-Request',
+      'Content-Type': 'application/json'
+    },
+    body: {
+      "action": "create",
+      "user_info": {
+        "email": req.params.userEmail,
+        "type": 1,
+        "first_name": req.params.userName,
+        "last_name": ""
+      }
+    },
+    json: true
+  };
+
+  rp(options)
+    .then((response) => {
+      resp = response
+      let result = JSON.stringify(resp)
+      res.send(JSON.parse(JSON.stringify(result)));
+    })
+    .catch(function (err) {
+      console.log('API call failed, reason ', err);
+    });
+})
 
 app.get('/create-meeting/:userEmail', (req, res) => {
   // console.log(req.params.userEmail, 'req.params.userEmail')

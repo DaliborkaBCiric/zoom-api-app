@@ -1,9 +1,9 @@
 import React, { Component } from 'react'
-import config from '../config';
-import UserMeeting from './UserMeeting';
 import socketIOClient from "socket.io-client";
 import InviteModal from './InviteModal';
+import UserMeeting from './UserMeeting';
 import avatar from '../media/avatar.jpg';
+import Jitsi from 'react-jitsi'
 
 let socket;
 
@@ -16,40 +16,29 @@ class Chat extends Component {
 			email: '',
 			users: [],
 			roomMembers: null,
-			modal: false,
 			nameErrorMessage: false,
 			emailErrorMessage: false,
 			userMeeting: [],
-			loading: false
+			loading: false,
+			setOnCall: false,
+			roomName: ''
 		};
-		this.toggle = this.toggle.bind(this);
 		socket = socketIOClient(this.state.endpoint);
 	}
 
-	toggle() {
-		this.setState({ modal: !this.state.modal });
-	}
-
 	componentDidMount() {
+		socket.on('connect', () => {   //  'connect' event is received on client on every connection start.
+			if (sessionStorage.getItem('userName')) {
+				socket.emit('join', { name: sessionStorage.getItem('userName'), email: sessionStorage.getItem('userEmail') });  //  where 'user' is your object containing email.
+			}
+		})
 		socket.on('update', usersInfo => {
 			this.setState({ users: usersInfo })
 		})
-		socket.on('connect', function () {
-			console.log("client connection done.....");
-		});
 		socket.on('updateRoom', roomMembers => {
 			this.setState({ roomMembers: roomMembers });
-		})
-	}
-
-	async getData() {
-		const res = await fetch(`/create-meeting/${sessionStorage.getItem('userEmail')}`);
-		return await res.json();
-	}
-
-	getMeeting() {
-		this.getData().then(userMeeting => this.setState({ userMeeting }))
-			.catch(err => { console.log('There is now meetings') })
+		});
+		this.setState({ name: sessionStorage.getItem('userName'), email: sessionStorage.getItem('userEmail') })
 	}
 
 	addUser = (username) => {
@@ -57,7 +46,6 @@ class Chat extends Component {
 			name,
 			email
 		} = this.state
-		this.getMeeting()
 		sessionStorage.setItem('userEmail', email);
 		sessionStorage.setItem('userName', name);
 		let storageEmail = sessionStorage.getItem('userEmail')
@@ -70,9 +58,7 @@ class Chat extends Component {
 		}
 		if (storageUserName !== '' && storageEmail !== '') {
 			this.setState({ loading: true })
-			setTimeout(() => {
-				socket.emit("join", storageUserName, storageEmail, this.state.userMeeting.join_url);
-			}, 2000);
+			socket.emit("join", { name: sessionStorage.getItem('userName'), email: sessionStorage.getItem('userEmail') });
 		} else {
 			if (storageUserName === '') {
 				this.setState({ nameErrorMessage: true })
@@ -83,9 +69,17 @@ class Chat extends Component {
 		}
 	}
 
-	callUser = (name, email) => {
-		socket.emit('initiate private message', name, email, this.state.userMeeting, 'Please Join');
-		socket.emit("send private message", "Cao")
+	deleteRoom = () => {
+		socket.emit("remove room", sessionStorage.getItem('userEmail'));
+	}
+
+	setOnCall = (userName, email) => {
+		socket.emit('initiate private message', userName, email, sessionStorage.getItem('userEmail'), 'Please Join');
+		socket.on('updateRoom', roomMembers => {
+			this.setState({ roomMembers });
+		});
+		let room = `privateRoom${sessionStorage.getItem('userName')}And${userName}`;
+		this.setState({ roomName: room, setOnCall: true })
 	}
 
 	render() {
@@ -93,13 +87,13 @@ class Chat extends Component {
 			users,
 			roomMembers,
 			name,
-			modal,
 			nameErrorMessage,
 			emailErrorMessage,
-			loading
+			loading,
+			roomName
 		} = this.state;
-
 		let sender = roomMembers && roomMembers.find(room => room.sender.email !== sessionStorage.getItem('userEmail'))
+
 		let is_logged_in = users && users.find(user => user.email === sessionStorage.getItem('userEmail'))
 		return (
 			<div className="content">
@@ -110,13 +104,14 @@ class Chat extends Component {
 							users={users}
 							receiverName={rm.receiver.name}
 							senderName={rm.sender.name}
-							toggle={this.toggle}
-							modalState={modal}
 							email={sender}
 							roomMembers={roomMembers}
+							roomName={roomName}
+							deleteRoom={() => this.deleteRoom}
 						/>
 					)}
-
+				{/* {this.state.setOnCall &&
+					<Jitsi roomName={this.state.roomName} displayName={sessionStorage.getItem('userName')} onAPILoad={JitsiMeetAPI => console.log('Good Morning everyone!')} />} */}
 				{!is_logged_in &&
 					<div key={socket.io.engine.id} >
 						<div className="form-group">
@@ -138,20 +133,20 @@ class Chat extends Component {
 				}
 				<div>
 					{users.length > 0 && is_logged_in && users.filter(user => user.email === sessionStorage.getItem('userEmail')).map(user =>
-						<div key={user.socketId}>
+						<div key={user.email}>
 							<h3>Welcome {user.userName}</h3>
 						</div>
 					)}
 					<div>
 						{is_logged_in && users.filter(user => user.email !== sessionStorage.getItem('userEmail')).map((user, index) =>
 							<div key={index}>
-								<div className="d-flex justify-content-between align-items-center py-2" key={user.socketId}>
+								<div className="d-flex justify-content-between align-items-center py-2" key={user.e}>
 									<div>
 										<img src={avatar} alt="Avatar" className="avatar" />
 										<span>{user.userName}</span>
 									</div>
-									<UserMeeting userEmail={sender} joinURL={is_logged_in.join_url}>
-										<button className="btn btn-info" onClick={() => this.callUser(user.userName, user.email)}>Invite</button>
+									<UserMeeting userEmail={sender} joinURL={`https://meet.jit.si/${roomName}#userInfo.displayName="${sessionStorage.getItem('userName')}"`}>
+										<button className="btn btn-info" onClick={() => this.setOnCall(user.userName, user.email)}> Invite</button>
 									</UserMeeting>
 								</div>
 							</div>)}
